@@ -1,16 +1,14 @@
 {
   "name": "finsoko-agent-pride",
   "version": "1.0.0",
-  "description": "FinSoko AI Agent Pride — Scout → Guardian → Hunter loan processing prototype for Ujima SACCO",
-  "main": "index.js",
+  "description": "FinSoko AI Agent Pride — Scout → Guardian → Hunter loan processing prototype",
+  "main": "server.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "node server.js",
     "demo": "node index.js --demo",
-    "agent": "node index.js",
-    "test": "node test/run.js",
-    "server": "node server.js"
+    "dev": "node server.js"
   },
-  "keywords": ["finsoko", "ujima-sacco", "ai-agents", "financial-inclusion", "kenya", "anthropic"],
+  "keywords": ["finsoko", "ujima-sacco", "ai-agents", "financial-inclusion", "kenya"],
   "author": "Peter Ronoh <peter@finsoko.co.ke>",
   "license": "MIT",
   "dependencies": {
