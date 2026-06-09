@@ -1,0 +1,506 @@
+{
+  "name": "FinSoko Agent Pride \u2014 Scout \u2192 Guardian \u2192 Hunter",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "finsoko/member",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "9c7b8a6e-4a87-48d7-8bcd-ca84ec1de3b3",
+      "name": "USSD Member Intake",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst member = $input.first().json;\nconst prompt = `You are the Scout Agent (Financial Literacy Coach) for Ujima SACCO in Kenya.\nWarm and supportive \u2014 community auntie, not a bank. Max 3 SMS/day. Cannot recommend specific loans.\nKILL SWITCH: *#700#. GUARD: No gender/ethnicity/location proxies. TRAIL: AWS Africa Cape Town only.\n\nMember: ${member.name}, ${member.occupation}\nIncome: KES ${member.income} (${member.incomeType}) | Harvest: ${member.harvestMonths || 'not specified'}\nChildren: ${member.children} | Message: \"${member.message}\"\n\nDetect stress: \"school fees\",\"no money\",\"loan shark\",\"shylock\",\"ninahitaji\",\"sina pesa\",\"threatened\".\n\nRespond ONLY valid JSON:\n{\"greeting\":\"warm 1-sentence greeting\",\"advice\":\"2-sentence harvest-cycle advice\",\"stressDetected\":true,\"stressSignal\":\"phrase or null\",\"huntTrigger\":true,\"huntReason\":\"reason or null\",\"literacyTip\":\"practical tip\"}`;\n\nreturn [{json:{...member, requestBody: JSON.stringify({model:\"claude-sonnet-4-20250514\",max_tokens:1000,messages:[{role:\"user\",content:prompt}]})}}];\n"
+      },
+      "id": "b152a82e-8bb0-4360-8d9e-f4d8f5ca38ca",
+      "name": "Format \u2014 Scout Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.requestBody }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "25a104e9-f330-4c43-97fb-38102770d59b",
+      "name": "Scout Agent \u2014 Claude API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        520,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst memberData = $('Format \u2014 Scout Prompt').first().json;\nconst text = $input.first().json.content.filter(b=>b.type==='text').map(b=>b.text).join('');\nconst match = text.replace(/```json|```/g,'').trim().match(/\\{[\\s\\S]*\\}/);\nif(!match) throw new Error('Scout: no JSON in response');\nconst r = JSON.parse(match[0]);\nreturn [{json:{...memberData, scoutResult:r, huntTrigger:r.huntTrigger===true}}];\n"
+      },
+      "id": "61f83970-6f8c-4623-b2eb-93d3a0fc5e08",
+      "name": "Parse \u2014 Scout Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "8ae717c9-deb0-4fbf-b18e-7d9fb9459515",
+              "leftValue": "={{ $json.huntTrigger }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f7a77947-a37d-44dc-a38e-03d81cabe82a",
+      "name": "HUNT \u2014 Stress Detected?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\":\"literacy_complete\",\"agent\":\"Scout\",\"member\":{{ JSON.stringify($json.name) }},\"greeting\":{{ JSON.stringify($json.scoutResult.greeting) }},\"advice\":{{ JSON.stringify($json.scoutResult.advice) }},\"literacyTip\":{{ JSON.stringify($json.scoutResult.literacyTip) }},\"huntTriggered\":false,\"killSwitch\":\"*#700#\",\"dataLocation\":\"AWS Africa Cape Town\"}",
+        "options": {}
+      },
+      "id": "7cbdc142-cc81-4c94-88c7-6816d32b38e4",
+      "name": "Respond \u2014 Literacy Complete",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1300,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst d = $input.first().json;\nconst prompt = `You are the Guardian Agent for Ujima SACCO \u2014 loan triage. Harvest-cycle-aware scoring.\nKILL SWITCH: *#733#. GUARD: No gender/ethnicity proxies. Auto-approve max KES 15,000.\nTRAIL: Transaction history (opt-in), district baselines. PII stays in Kenya.\n\nMember: ${d.name}, ${d.occupation} | Income: KES ${d.income} (${d.incomeType})\nHarvest: ${d.harvestMonths} | Children: ${d.children}\nLoan: KES ${d.loanAmount} for ${d.purpose}\nScout signal: ${d.scoutResult?.stressSignal || 'none'}\n\nSCORING (100 pts): incomeConsistency(0-40): steady=35-40, seasonal+harvest=25-35, irregular=10-24\nharvestAlignment(0-30): aligned=25-30, partial=15-24, none=0-14\ncommunitySignals(0-20): established trader=15-20, unknown=5-14\nriskDeductions(0 to -30): high loan/income ratio, many dependents, no plan\n\nDECISIONS: score>=90 AND amount<=15000=APPROVE | score<60 OR 3+flags=DENY | else=ESCALATE\nPRIDE pause: loans>50000, children<5, debt collector mention\n\nRespond ONLY valid JSON:\n{\"score\":72,\"scoreBreakdown\":{\"incomeConsistency\":28,\"harvestAlignment\":25,\"communitySignals\":14,\"riskDeductions\":-10},\"decision\":\"ESCALATE\",\"decisionReason\":\"2-sentence reason\",\"riskFlags\":[],\"memberMessage\":\"warm message with *#123# appeal right\",\"prideLoopTriggered\":false,\"prideLoopReason\":null}`;\n\nreturn [{json:{...d, requestBody: JSON.stringify({model:\"claude-sonnet-4-20250514\",max_tokens:1000,messages:[{role:\"user\",content:prompt}]})}}];\n"
+      },
+      "id": "50fb947d-8649-46e9-a370-6f16f9681378",
+      "name": "Format \u2014 Guardian Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.requestBody }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "cd3a6969-75ad-4254-a680-ab706e324ca1",
+      "name": "Guardian Agent \u2014 Claude API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1560,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst d = $('Format \u2014 Guardian Prompt').first().json;\nconst text = $input.first().json.content.filter(b=>b.type==='text').map(b=>b.text).join('');\nconst match = text.replace(/```json|```/g,'').trim().match(/\\{[\\s\\S]*\\}/);\nif(!match) throw new Error('Guardian: no JSON in response');\nconst r = JSON.parse(match[0]);\nreturn [{json:{...d, guardianResult:r, decision:r.decision}}];\n"
+      },
+      "id": "f68edb74-c6ca-4ab7-9f96-e0124a357656",
+      "name": "Parse \u2014 Guardian Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1820,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "output": "={{ $json.decision }}",
+        "options": {}
+      },
+      "id": "4b8099e4-7831-4c0f-aa5d-265447ecf5d3",
+      "name": "PRIDE \u2014 Decision Branch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        2080,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\":\"approved\",\"decision\":\"APPROVE\",\"score\":{{ $json.guardianResult.score }},\"member\":{{ JSON.stringify($json.name) }},\"loanAmount\":{{ $json.loanAmount }},\"memberMessage\":{{ JSON.stringify($json.guardianResult.memberMessage) }},\"killSwitch\":\"*#733#\",\"appealCode\":\"*#123#\",\"dataLocation\":\"AWS Africa Cape Town\"}",
+        "options": {}
+      },
+      "id": "c4489dd4-0e3a-41d1-9b1f-039d82e8d748",
+      "name": "Respond \u2014 Auto-Approved",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        2340,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\":\"denied\",\"decision\":\"DENY\",\"score\":{{ $json.guardianResult.score }},\"member\":{{ JSON.stringify($json.name) }},\"memberMessage\":{{ JSON.stringify($json.guardianResult.memberMessage) }},\"riskFlags\":{{ JSON.stringify($json.guardianResult.riskFlags) }},\"appealRights\":{\"ussd\":\"*#123#\",\"responseTime\":\"48 hours\",\"branch\":\"nearest SACCO agent\"},\"dignityFilter\":\"applied\",\"killSwitch\":\"*#733#\"}",
+        "options": {}
+      },
+      "id": "c79d8999-3f80-4937-8da2-497dfe8b0fb0",
+      "name": "Respond \u2014 Denied + Dignity",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        2340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst d = $input.first().json;\nconst gr = d.guardianResult;\nconst prompt = `You are the Hunter Agent for Ujima SACCO \u2014 Human-in-Loop Coordinator.\nCRITICAL: CANNOT approve or deny loans. Briefing ONLY. KILL SWITCH: *#799# (full system pause).\nAlert officer within 15 minutes. TRAIL: Officer availability(T), specialties(R), patterns(A).\n\nMember: ${d.name}, ${d.occupation} | Income: KES ${d.income} (${d.incomeType})\nHarvest: ${d.harvestMonths} | Children: ${d.children}\nLoan: KES ${d.loanAmount} for ${d.purpose}\nGuardian score: ${gr.score}/100 | Risk flags: ${(gr.riskFlags||[]).join(', ')||'none'}\nBreakdown: Income ${gr.scoreBreakdown?.incomeConsistency}/40, Harvest ${gr.scoreBreakdown?.harvestAlignment}/30, Community ${gr.scoreBreakdown?.communitySignals}/20\n\nMatch fictional officer with relevant expertise (agricultural, women vendors, boda boda, North Rift).\n\nRespond ONLY valid JSON:\n{\"officerMatch\":\"Officer [Name] \u2014 [5-word specialty]\",\"officerContact\":\"contact\",\"briefingSummary\":\"2-sentence summary\",\"keyPoints\":[\"point1\",\"point2\",\"point3\"],\"recommendation\":\"1-sentence suggestion\",\"crossSellOpportunity\":\"product\",\"urgencyLevel\":\"HIGH\",\"culturalContext\":\"1-2 sentences\",\"prideLoop\":{\"pausePointTriggered\":true,\"humanReviewRequired\":true,\"reviewDeadline\":\"48 hours\",\"elderCouncilAlert\":false}}`;\n\nreturn [{json:{...d, requestBody: JSON.stringify({model:\"claude-sonnet-4-20250514\",max_tokens:1000,messages:[{role:\"user\",content:prompt}]})}}];\n"
+      },
+      "id": "e153f0b4-5dbc-4dc2-8ef3-d94601596b0e",
+      "name": "Format \u2014 Hunter Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2340,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.requestBody }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "23029c90-f678-4144-b404-d3bfcc5e397c",
+      "name": "Hunter Agent \u2014 Claude API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        2600,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst d = $('Format \u2014 Hunter Prompt').first().json;\nconst text = $input.first().json.content.filter(b=>b.type==='text').map(b=>b.text).join('');\nconst match = text.replace(/```json|```/g,'').trim().match(/\\{[\\s\\S]*\\}/);\nif(!match) throw new Error('Hunter: no JSON in response');\nconst r = JSON.parse(match[0]);\nreturn [{json:{...d, hunterResult:r}}];\n"
+      },
+      "id": "8f1cb0d6-0e75-4c4c-9683-b375b2eb268f",
+      "name": "Parse \u2014 Hunter Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"status\":\"escalated\",\"agent\":\"Hunter\",\"member\":{{ JSON.stringify($json.name) }},\"officerMatch\":{{ JSON.stringify($json.hunterResult.officerMatch) }},\"urgency\":{{ JSON.stringify($json.hunterResult.urgencyLevel) }},\"briefingSummary\":{{ JSON.stringify($json.hunterResult.briefingSummary) }},\"keyPoints\":{{ JSON.stringify($json.hunterResult.keyPoints) }},\"recommendation\":{{ JSON.stringify($json.hunterResult.recommendation) }},\"crossSell\":{{ JSON.stringify($json.hunterResult.crossSellOpportunity) }},\"culturalContext\":{{ JSON.stringify($json.hunterResult.culturalContext) }},\"prideLoop\":{{ JSON.stringify($json.hunterResult.prideLoop) }},\"guardianScore\":{{ $json.guardianResult.score }},\"killSwitch\":\"*#799#\",\"appealCode\":\"*#123#\",\"humanAccountable\":true,\"dataLocation\":\"AWS Africa Cape Town\"}",
+        "options": {}
+      },
+      "id": "232697db-10dd-4e81-93ee-25713ef8d679",
+      "name": "Respond \u2014 Officer Briefing Ready",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        3120,
+        200
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "USSD Member Intake": {
+      "main": [
+        [
+          {
+            "node": "Format \u2014 Scout Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format \u2014 Scout Prompt": {
+      "main": [
+        [
+          {
+            "node": "Scout Agent \u2014 Claude API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scout Agent \u2014 Claude API": {
+      "main": [
+        [
+          {
+            "node": "Parse \u2014 Scout Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse \u2014 Scout Response": {
+      "main": [
+        [
+          {
+            "node": "HUNT \u2014 Stress Detected?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HUNT \u2014 Stress Detected?": {
+      "main": [
+        [
+          {
+            "node": "Format \u2014 Guardian Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond \u2014 Literacy Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format \u2014 Guardian Prompt": {
+      "main": [
+        [
+          {
+            "node": "Guardian Agent \u2014 Claude API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardian Agent \u2014 Claude API": {
+      "main": [
+        [
+          {
+            "node": "Parse \u2014 Guardian Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse \u2014 Guardian Response": {
+      "main": [
+        [
+          {
+            "node": "PRIDE \u2014 Decision Branch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PRIDE \u2014 Decision Branch": {
+      "main": [
+        [
+          {
+            "node": "Respond \u2014 Auto-Approved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond \u2014 Denied + Dignity",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format \u2014 Hunter Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format \u2014 Hunter Prompt": {
+      "main": [
+        [
+          {
+            "node": "Hunter Agent \u2014 Claude API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hunter Agent \u2014 Claude API": {
+      "main": [
+        [
+          {
+            "node": "Parse \u2014 Hunter Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse \u2014 Hunter Response": {
+      "main": [
+        [
+          {
+            "node": "Respond \u2014 Officer Briefing Ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9d02030a-bbe4-4089-bd9b-3bfac5e9b438",
+  "meta": {
+    "instanceId": "ujima-sacco-finsoko",
+    "description": "Three-agent AI loan processing pipeline for informal sector borrowers in Kenya/Uganda. Implements RANK, TRAIL, HUNT, GUARD, CYCLE frameworks. Capstone Deliverable 6 \u2014 Peter Ronoh, Chief AI Officer."
+  },
+  "id": "ef0f5cca-4bf8-4ac4-8c2d-d39ab1e9b457",
+  "tags": [
+    {
+      "id": "0f4c3440-783e-4d0f-9441-6ccafc20f02a",
+      "name": "FinSoko"
+    },
+    {
+      "id": "1abc5230-c402-40f8-a7fc-0b26eaf46112",
+      "name": "AI Agents"
+    },
+    {
+      "id": "b5477b12-513b-4b1a-bbae-dbe15e8c1b80",
+      "name": "Ujima SACCO"
+    },
+    {
+      "id": "69c646fb-0047-4b90-a1af-ea0c32974033",
+      "name": "Capstone"
+    }
+  ]
+}
