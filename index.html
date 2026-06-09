@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinSoko Agent Pride — Ujima SACCO</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1F4E79;--blue:#2E75B6;--teal:#0F6E56;--amber:#7B4200;
+  --red:#8B1A1A;--light:#EBF3FB;--mint:#E3F5EF;--sand:#FDF4E7;
+  --rose:#FDECEA;--white:#FFFFFF;--body:#2D2D2D;--muted:#595959;
+  --border:#C8C8C8;--bg:#F8F9FA;--card:#FFFFFF;
+}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--body);min-height:100vh}
+header{background:var(--navy);color:white;padding:1.25rem 2rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+header h1{font-size:1.2rem;font-weight:600;letter-spacing:.3px}
+header p{font-size:.8rem;opacity:.7;margin-top:2px}
+.ks-bar{display:flex;gap:6px;align-items:center}
+.ks-btn{font-size:.7rem;padding:3px 8px;border-radius:4px;border:1px solid #F09595;background:#FCEBEB;color:#501313;cursor:pointer;font-weight:500}
+.kill-active{background:#501313!important;color:white!important;border-color:#501313!important}
+.container{max-width:900px;margin:0 auto;padding:1.5rem 1rem}
+
+/* API Key bar */
+.api-bar{background:var(--sand);border:1px solid #E0C88A;border-radius:8px;padding:.75rem 1rem;margin-bottom:1.5rem;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.api-bar input{flex:1;min-width:200px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;font-family:monospace}
+.api-status{font-size:.75rem;padding:3px 8px;border-radius:4px;font-weight:500}
+.api-ok{background:var(--mint);color:#085041}.api-no{background:var(--rose);color:#501313}
+
+/* Progress */
+.progress{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--border);margin-bottom:1.5rem}
+.prog-step{flex:1;padding:8px 4px;text-align:center;font-size:.7rem;font-weight:500;color:var(--muted);background:#F0F2F5;border-right:1px solid var(--border);transition:all .3s}
+.prog-step:last-child{border-right:none}
+.prog-step.active{background:var(--mint);color:#085041}
+.prog-step.done{background:#EAF3DE;color:#27500A}
+.prog-step.active-blue{background:var(--light);color:#0C447C}
+.prog-step.active-purple{background:#EEEDFE;color:#3C3489}
+
+/* Cards */
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:1rem;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.card-teal{border-left:4px solid var(--teal);border-radius:0 10px 10px 0}
+.card-blue{border-left:4px solid var(--blue);border-radius:0 10px 10px 0}
+.card-purple{border-left:4px solid #7F77DD;border-radius:0 10px 10px 0}
+.card-header{display:flex;align-items:center;gap:10px;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid #F0F0F0}
+.agent-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+.agent-name{font-size:.95rem;font-weight:600;color:var(--body)}
+.agent-sub{font-size:.75rem;color:var(--muted)}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:.7rem;font-weight:500;padding:2px 8px;border-radius:4px;margin:2px}
+.badge-teal{background:var(--mint);color:#085041}
+.badge-blue{background:var(--light);color:#0C447C}
+.badge-red{background:var(--rose);color:#501313}
+.badge-amber{background:var(--sand);color:#633806}
+.badge-green{background:#EAF3DE;color:#27500A}
+.badge-purple{background:#EEEDFE;color:#3C3489}
+.badge-gray{background:#F0F2F5;color:var(--muted)}
+
+/* Form */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.form-grid{grid-template-columns:1fr}}
+.form-group{margin-bottom:.9rem}
+label{display:block;font-size:.78rem;font-weight:500;color:var(--muted);margin-bottom:4px}
+input,select,textarea{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;font-family:inherit;color:var(--body);background:white;transition:border .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue)}
+textarea{resize:vertical;min-height:70px}
+.harvest-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:4px}
+@media(max-width:500px){.harvest-grid{grid-template-columns:repeat(4,1fr)}}
+.hbtn{padding:5px 2px;font-size:.7rem;border:1px solid var(--border);border-radius:4px;background:white;cursor:pointer;text-align:center;transition:all .15s}
+.hbtn.sel{background:var(--mint);color:#085041;border-color:var(--teal);font-weight:600}
+.radio-row{display:flex;gap:16px;margin-top:4px}
+.radio-row label{display:flex;gap:6px;align-items:center;cursor:pointer;font-size:.83rem;font-weight:400;color:var(--body)}
+
+/* Buttons */
+.btn{padding:9px 20px;border-radius:6px;border:1px solid var(--border);background:white;color:var(--body);font-size:.85rem;cursor:pointer;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
+.btn:hover{background:#F0F2F5}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-teal{background:var(--mint);border-color:var(--teal);color:#085041}
+.btn-teal:hover{background:#9FE1CB}
+.btn-blue{background:var(--light);border-color:var(--blue);color:#0C447C}
+.btn-blue:hover{background:#B5D4F4}
+.btn-purple{background:#EEEDFE;border-color:#7F77DD;color:#3C3489}
+.btn-purple:hover{background:#CECBF6}
+.btn-sm{padding:5px 12px;font-size:.78rem}
+.btn-row{display:flex;justify-content:flex-end;gap:8px;margin-top:.75rem;flex-wrap:wrap}
+
+/* Output elements */
+.msg-box{background:#F8F9FA;border-radius:6px;padding:.75rem;font-size:.85rem;color:var(--body);font-style:italic;line-height:1.6;margin-bottom:.75rem}
+.score-wrap{margin-bottom:.75rem}
+.score-number{font-size:2rem;font-weight:600;color:var(--body)}
+.score-track{height:10px;background:#F0F2F5;border-radius:5px;overflow:hidden;margin-top:4px}
+.score-fill{height:100%;border-radius:5px;transition:width .8s ease}
+.fill-green{background:var(--teal)}.fill-amber{background:#EF9F27}.fill-red{background:#E24B4A}
+.breakdown{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:.75rem}
+@media(max-width:500px){.breakdown{grid-template-columns:repeat(2,1fr)}}
+.bk-item{background:#F8F9FA;border-radius:6px;padding:8px;text-align:center}
+.bk-val{font-size:1.1rem;font-weight:600;color:var(--body)}
+.bk-lbl{font-size:.65rem;color:var(--muted);margin-top:2px}
+.decision-box{border-radius:8px;padding:1rem;text-align:center;margin:.75rem 0}
+.dec-approve{background:#EAF3DE;border:1px solid #97C459}
+.dec-escalate{background:var(--sand);border:1px solid #EF9F27}
+.dec-deny{background:var(--rose);border:1px solid #F09595}
+.dec-label{font-size:1.1rem;font-weight:600;margin-bottom:4px}
+.dec-approve .dec-label{color:#27500A}.dec-escalate .dec-label{color:#633806}.dec-deny .dec-label{color:#501313}
+.dec-reason{font-size:.8rem;opacity:.8}
+.key-point{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid #F0F0F0;font-size:.85rem}
+.key-point:last-child{border-bottom:none}
+.kp-dot{width:6px;height:6px;border-radius:50%;background:#7F77DD;flex-shrink:0;margin-top:5px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:.75rem}
+@media(max-width:500px){.two-col{grid-template-columns:1fr}}
+.info-cell{background:#F8F9FA;border-radius:6px;padding:.75rem}
+.info-lbl{font-size:.7rem;color:var(--muted);margin-bottom:4px;font-weight:500}
+.info-val{font-size:.82rem;color:var(--body)}
+.trail-box{background:#F8F9FA;border-radius:6px;padding:.75rem;font-size:.78rem;margin-top:.75rem}
+.trail-row{display:flex;gap:8px;padding:3px 0;border-bottom:1px solid #EBEBEB}
+.trail-row:last-child{border-bottom:none}
+.trail-key{font-weight:600;color:var(--muted);width:12px;flex-shrink:0}
+.trail-val{color:var(--body)}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #DDD;border-top-color:var(--navy);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-msg{text-align:center;padding:1.5rem;color:var(--muted);font-size:.85rem}
+.err-box{background:var(--rose);border:1px solid #F09595;border-radius:8px;padding:.75rem 1rem;font-size:.83rem;color:#501313;margin-bottom:1rem}
+.hint{font-size:.75rem;color:var(--muted);margin-top:.5rem;display:flex;gap:5px}
+.section-title{font-size:.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.5rem}
+.footer{text-align:center;padding:1.5rem;font-size:.75rem;color:var(--muted);border-top:1px solid var(--border);margin-top:2rem}
+.hidden{display:none}
+.fade-in{animation:fadeIn .35s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🦁 FinSoko Agent Pride — Ujima SACCO</h1>
+    <p>Scout → Guardian → Hunter | Capstone Deliverable 6 | Peter Ronoh, Chief AI Officer</p>
+  </div>
+  <div class="ks-bar">
+    <span style="font-size:.7rem;opacity:.7;margin-right:4px">Kill switches:</span>
+    <button class="ks-btn" id="ks-scout" onclick="triggerKill('Scout','#700')">Scout *#700#</button>
+    <button class="ks-btn" id="ks-guardian" onclick="triggerKill('Guardian','#733')">Guardian *#733#</button>
+    <button class="ks-btn" id="ks-hunter" onclick="triggerKill('Hunter','#799')">Hunter *#799#</button>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- API Key Bar -->
+  <div class="api-bar">
+    <span style="font-size:.8rem;font-weight:500;color:var(--amber);white-space:nowrap">🔑 Anthropic API Key:</span>
+    <input type="password" id="api-key" placeholder="sk-ant-..." oninput="checkKey()">
+    <span class="api-status api-no" id="api-status">Not set</span>
+    <span style="font-size:.72rem;color:var(--muted)">Your key is never stored or sent anywhere except api.anthropic.com</span>
+  </div>
+
+  <!-- Kill switch notice -->
+  <div class="err-box hidden" id="kill-notice"></div>
+  <div class="err-box hidden" id="err-box"></div>
+
+  <!-- Progress bar -->
+  <div class="progress">
+    <div class="prog-step active" id="ps-intake">📋 Intake</div>
+    <div class="prog-step" id="ps-scout">🔍 Scout</div>
+    <div class="prog-step" id="ps-guardian">🛡 Guardian</div>
+    <div class="prog-step" id="ps-hunter">🏹 Hunter</div>
+    <div class="prog-step" id="ps-done">✅ Done</div>
+  </div>
+
+  <!-- INTAKE FORM -->
+  <div id="intake-panel">
+    <div class="card">
+      <div class="card-header">
+        <div class="agent-icon" style="background:var(--mint)">📋</div>
+        <div><div class="agent-name">Member Intake — USSD *384# Simulation</div>
+        <div class="agent-sub">Enter member details to activate the agent pipeline</div></div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Member name</label>
+          <input type="text" id="f-name" placeholder="e.g. Grace Atieno" value="Grace Atieno">
+        </div>
+        <div class="form-group">
+          <label>Occupation</label>
+          <select id="f-occ">
+            <option value="Maize Farmer">Maize / Smallholder Farmer</option>
+            <option value="Market Vendor (Mama Mboga)">Market Vendor (Mama Mboga)</option>
+            <option value="Boda Boda Rider">Boda Boda Rider</option>
+            <option value="Shea Butter Trader">Shea Butter Trader</option>
+            <option value="Jua Kali Artisan">Jua Kali Artisan</option>
+            <option value="Formal Employee (Salaried)">Formal Employee (Salaried)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Monthly income (KES)</label>
+          <input type="number" id="f-income" value="22000" min="0">
+        </div>
+        <div class="form-group">
+          <label>Number of children</label>
+          <input type="number" id="f-children" value="3" min="0">
+        </div>
+        <div class="form-group">
+          <label>Loan amount requested (KES)</label>
+          <input type="number" id="f-loan" value="28000" min="0">
+        </div>
+        <div class="form-group">
+          <label>Loan purpose</label>
+          <input type="text" id="f-purpose" value="school fees and farm inputs">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Income type</label>
+        <div class="radio-row">
+          <label><input type="radio" name="itype" value="seasonal" checked> Seasonal (harvest-dependent)</label>
+          <label><input type="radio" name="itype" value="steady"> Steady (monthly salary)</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Peak income / harvest months</label>
+        <div class="harvest-grid" id="harvest-grid"></div>
+      </div>
+
+      <div class="form-group">
+        <label>Member's USSD message</label>
+        <textarea id="f-msg">Habari. Ninahitaji mkopo wa haraka. Watoto wangu wanaanza shule wiki ijayo na sina pesa za ada. Nimekuwa mkulima wa mahindi kwa miaka 10 na nalipa mikopo yangu yote. Tafadhali nisaidie.</textarea>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-sm" onclick="loadDemo()">Load demo scenario</button>
+        <button class="btn btn-teal" id="btn-start" onclick="runScout()">
+          🔍 Activate Scout Agent
+        </button>
+      </div>
+      <div class="hint">ℹ️ This app calls Claude AI in real time. Results are generated live for each agent stage.</div>
+    </div>
+  </div>
+
+  <!-- SCOUT OUTPUT -->
+  <div id="scout-panel" class="hidden fade-in">
+    <div class="card card-teal">
+      <div class="card-header">
+        <div class="agent-icon" style="background:var(--mint)">🔍</div>
+        <div style="flex:1">
+          <div class="agent-name">Scout Agent <span class="badge badge-teal">Financial Literacy Coach</span> <span class="badge badge-gray" id="scout-ks-badge" style="display:none">⛔ Suspended</span></div>
+          <div class="agent-sub">Max 3 SMS/day · Cannot recommend loans · Kill switch: *#700# · TRAIL: AWS Africa Cape Town</div>
+        </div>
+      </div>
+      <div class="loading-msg hidden" id="scout-loading"><span class="spinner"></span>&nbsp; Scout Agent analysing message...</div>
+      <div id="scout-output" class="hidden">
+        <div class="msg-box" id="s-greeting"></div>
+        <p style="font-size:.85rem;line-height:1.6;margin-bottom:.75rem" id="s-advice"></p>
+        <div id="s-badges" style="margin-bottom:.75rem"></div>
+        <div class="trail-box">
+          <div class="section-title">TRAIL Memory Stored</div>
+          <div id="s-trail"></div>
+        </div>
+        <div style="background:var(--sand);border-radius:6px;padding:.6rem .75rem;font-size:.8rem;color:#633806;margin-top:.75rem" id="s-tip"></div>
+        <div class="btn-row" id="s-action"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GUARDIAN OUTPUT -->
+  <div id="guardian-panel" class="hidden fade-in">
+    <div class="card card-blue">
+      <div class="card-header">
+        <div class="agent-icon" style="background:var(--light)">🛡</div>
+        <div style="flex:1">
+          <div class="agent-name">Guardian Agent <span class="badge badge-blue">Loan Triage</span> <span class="badge badge-gray" id="guardian-ks-badge" style="display:none">⛔ Suspended</span></div>
+          <div class="agent-sub">Auto-approve ≤KES 15,000 · Kill switch: *#733# · TRAIL: Transaction history + district baselines</div>
+        </div>
+      </div>
+      <div class="loading-msg hidden" id="guardian-loading"><span class="spinner"></span>&nbsp; Guardian screening application...</div>
+      <div id="guardian-output" class="hidden">
+        <div class="score-wrap">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <span class="score-number" id="g-score">—</span>
+            <span style="font-size:.8rem;color:var(--muted)">/ 100 credit score</span>
+          </div>
+          <div class="score-track"><div class="score-fill" id="g-bar" style="width:0%"></div></div>
+        </div>
+        <div class="breakdown" id="g-breakdown"></div>
+        <div class="decision-box" id="g-decision">
+          <div class="dec-label" id="g-dec-label"></div>
+          <div class="dec-reason" id="g-dec-reason"></div>
+        </div>
+        <div id="g-flags" style="margin-bottom:.75rem"></div>
+        <div class="section-title">Message to Member</div>
+        <div class="msg-box" id="g-msg"></div>
+        <div class="btn-row" id="g-action"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HUNTER OUTPUT -->
+  <div id="hunter-panel" class="hidden fade-in">
+    <div class="card card-purple">
+      <div class="card-header">
+        <div class="agent-icon" style="background:#EEEDFE">🏹</div>
+        <div style="flex:1">
+          <div class="agent-name">Hunter Agent <span class="badge badge-purple">Human-in-Loop</span> <span class="badge badge-gray" id="hunter-ks-badge" style="display:none">⛔ Suspended</span></div>
+          <div class="agent-sub">Cannot approve or deny · Officer briefing only · Kill switch: *#799#</div>
+        </div>
+      </div>
+      <div class="loading-msg hidden" id="hunter-loading"><span class="spinner"></span>&nbsp; Preparing officer briefing...</div>
+      <div id="hunter-output" class="hidden">
+        <div class="info-cell" style="margin-bottom:.75rem">
+          <div class="info-lbl">Officer matched</div>
+          <div style="font-size:.95rem;font-weight:600;color:var(--body)" id="h-officer"></div>
+        </div>
+        <div class="msg-box" id="h-summary"></div>
+        <div class="section-title">Key Briefing Points</div>
+        <div id="h-points" style="margin-bottom:.75rem"></div>
+        <div class="two-col">
+          <div class="info-cell"><div class="info-lbl">Cross-sell opportunity</div><div class="info-val" id="h-cross"></div></div>
+          <div class="info-cell"><div class="info-lbl">Cultural context</div><div class="info-val" id="h-culture"></div></div>
+        </div>
+        <div style="margin-top:.75rem;display:flex;gap:6px;align-items:center;flex-wrap:wrap" id="h-urgency"></div>
+        <div style="background:var(--sand);border-radius:6px;padding:.75rem;font-size:.83rem;color:#633806;margin-top:.75rem" id="h-rec"></div>
+        <div class="btn-row">
+          <button class="btn btn-sm" onclick="reset()">↺ New scenario</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<div class="footer">
+  FinSoko Agent Pride · Ujima SACCO · Kenya DPA 2022 · SASRA Compliant · All data: AWS Africa Cape Town<br>
+  Capstone Deliverable 6 · Peter Ronoh, Chief AI Officer · <a href="https://github.com/RonohSoy/FINSOKO-AGENT-PRIDE" target="_blank" style="color:var(--blue)">GitHub Repo</a>
+</div>
+
+<script>
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const FULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+let selMonths=['October','November','March','April'];
+let kills={Scout:false,Guardian:false,Hunter:false};
+let guardianResult=null;
+
+function buildHarvest(){
+  const g=document.getElementById('harvest-grid');
+  g.innerHTML='';
+  MONTHS.forEach((m,i)=>{
+    const b=document.createElement('button');
+    b.className='hbtn'+(selMonths.includes(FULL[i])?' sel':'');
+    b.textContent=m; b.type='button';
+    b.onclick=()=>{
+      const f=FULL[i];
+      selMonths=selMonths.includes(f)?selMonths.filter(x=>x!==f):[...selMonths,f];
+      buildHarvest();
+    };
+    g.appendChild(b);
+  });
+}
+buildHarvest();
+
+function checkKey(){
+  const k=document.getElementById('api-key').value.trim();
+  const s=document.getElementById('api-status');
+  if(k.startsWith('sk-ant-')&&k.length>20){s.textContent='✓ Ready';s.className='api-status api-ok';}
+  else{s.textContent='Not set';s.className='api-status api-no';}
+}
+
+function loadDemo(){
+  document.getElementById('f-name').value='Grace Atieno';
+  document.getElementById('f-occ').value='Maize Farmer';
+  document.getElementById('f-income').value='22000';
+  document.getElementById('f-children').value='3';
+  document.getElementById('f-loan').value='28000';
+  document.getElementById('f-purpose').value='school fees and farm inputs';
+  document.getElementById('f-msg').value='Habari. Ninahitaji mkopo wa haraka. Watoto wangu wanaanza shule wiki ijayo na sina pesa za ada. Nimekuwa mkulima wa mahindi kwa miaka 10 na nalipa mikopo yangu yote. Tafadhali nisaidie.';
+  selMonths=['October','November','March','April'];
+  buildHarvest();
+}
+
+function getApiKey(){return document.getElementById('api-key').value.trim();}
+
+function getMember(){
+  return{
+    name:document.getElementById('f-name').value||'Member',
+    occupation:document.getElementById('f-occ').value,
+    income:document.getElementById('f-income').value||'15000',
+    incomeType:document.querySelector('input[name="itype"]:checked')?.value||'seasonal',
+    harvestMonths:selMonths.join(', ')||'not specified',
+    children:document.getElementById('f-children').value||'0',
+    loanAmount:document.getElementById('f-loan').value||'10000',
+    purpose:document.getElementById('f-purpose').value||'business',
+    message:document.getElementById('f-msg').value||'I need help.'
+  };
+}
+
+function setStage(s){
+  const order=['intake','scout','guardian','hunter','done'];
+  order.forEach((st,i)=>{
+    const el=document.getElementById('ps-'+st);
+    const idx=order.indexOf(s);
+    if(i<idx)el.className='prog-step done';
+    else if(st===s){
+      const cls={scout:'active',guardian:'active-blue',hunter:'active-purple',done:'done'};
+      el.className='prog-step '+(cls[s]||'active');
+    }else el.className='prog-step';
+  });
+}
+
+function show(id){document.getElementById(id).classList.remove('hidden');}
+function hide(id){document.getElementById(id).classList.add('hidden');}
+function showErr(msg){const b=document.getElementById('err-box');b.textContent='⚠ '+msg;show('err-box');}
+function hideErr(){hide('err-box');}
+
+function triggerKill(agent,code){
+  kills[agent]=true;
+  const n=document.getElementById('kill-notice');
+  n.textContent=`⛔ Kill switch activated: ${agent} Agent suspended via USSD ${code}. Human takeover required. SASRA notified.`;
+  show('kill-notice');
+  const badge=document.getElementById(agent.toLowerCase()+'-ks-badge');
+  if(badge)badge.style.display='inline-flex';
+  const ks=document.getElementById('ks-'+agent.toLowerCase());
+  if(ks)ks.classList.add('kill-active');
+}
+
+async function callClaude(prompt){
+  const key=getApiKey();
+  if(!key){throw new Error('Please enter your Anthropic API key above.');}
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+  });
+  if(!res.ok){const e=await res.json();throw new Error(e.error?.message||'API error '+res.status);}
+  const data=await res.json();
+  const text=data.content.map(b=>b.type==='text'?b.text:'').join('');
+  const match=text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+  if(!match)throw new Error('No JSON in response. Try again.');
+  return JSON.parse(match[0]);
+}
+
+async function runScout(){
+  if(kills.Scout){triggerKill('Scout','#700');return;}
+  const m=getMember();
+  document.getElementById('btn-start').disabled=true;
+  hideErr(); setStage('scout');
+  show('scout-panel'); show('scout-loading'); hide('scout-output');
+
+  const prompt=`You are the Scout Agent (Financial Literacy Coach) for Ujima SACCO in Kenya.
+Warm and supportive — like a community auntie, not a bank. Max 3 SMS/day. Cannot recommend specific loans.
+KILL SWITCH: *#700#. GUARD: No gender/ethnicity/location proxies. Data: AWS Africa Cape Town (Kenya DPA 2022).
+
+Member: ${m.name}, ${m.occupation}
+Income: KES ${m.income}/mo (${m.incomeType}) | Harvest: ${m.harvestMonths}
+Children: ${m.children} | Message: "${m.message}"
+
+Detect stress signals: "school fees","no money","loan shark","shylock","ninahitaji","sina pesa","threatened","debt collector".
+
+Respond ONLY with valid JSON (no markdown):
+{"greeting":"warm 1-sentence Swahili/English greeting","advice":"2-sentence harvest-cycle budgeting advice for their occupation","stressDetected":true,"stressSignal":"exact phrase or null","huntTrigger":true,"huntReason":"reason or null","literacyTip":"one practical savings tip for their situation"}`;
+
+  try{
+    const r=await callClaude(prompt);
+    hide('scout-loading'); show('scout-output');
+    document.getElementById('s-greeting').textContent=r.greeting||'Karibu!';
+    document.getElementById('s-advice').textContent=r.advice||'';
+    const badges=document.getElementById('s-badges');
+    badges.innerHTML='';
+    if(r.stressDetected) badges.innerHTML+=`<span class="badge badge-red">⚠ Stress detected: "${r.stressSignal}"</span>`;
+    badges.innerHTML+=r.huntTrigger
+      ?'<span class="badge badge-amber">→ HUNT triggered — escalating to Guardian</span>'
+      :'<span class="badge badge-teal">✓ Literacy complete — no loan needed</span>';
+    document.getElementById('s-trail').innerHTML=
+      `<div class="trail-row"><span class="trail-key">T</span><span class="trail-val">Active conversation — stress signal detected</span></div>`+
+      `<div class="trail-row"><span class="trail-key">R</span><span class="trail-val">Harvest calendar: ${m.harvestMonths}</span></div>`+
+      `<div class="trail-row"><span class="trail-key">A</span><span class="trail-val">Literacy gap logged anonymously</span></div>`+
+      `<div class="trail-row"><span class="trail-key">L</span><span class="trail-val">Stored on AWS Africa Cape Town — Kenya DPA 2022</span></div>`;
+    document.getElementById('s-tip').innerHTML='💡 Tip: '+r.literacyTip;
+    const sa=document.getElementById('s-action');
+    if(r.huntTrigger){
+      sa.innerHTML='<button class="btn btn-blue" onclick="runGuardian()">🛡 HUNT: Activate Guardian Agent →</button>';
+    }else{
+      sa.innerHTML='<button class="btn btn-sm" onclick="reset()">↺ New scenario</button>';
+      setStage('done');
+    }
+  }catch(e){
+    hide('scout-loading');
+    showErr('Scout Agent: '+e.message);
+    document.getElementById('btn-start').disabled=false;
+  }
+}
+
+async function runGuardian(){
+  if(kills.Guardian){triggerKill('Guardian','#733');return;}
+  const m=getMember();
+  hideErr(); setStage('guardian');
+  show('guardian-panel'); show('guardian-loading'); hide('guardian-output');
+
+  const prompt=`You are the Guardian Agent for Ujima SACCO — harvest-cycle-aware loan triage.
+KILL SWITCH: *#733#. Auto-approve max KES 15,000. GUARD: No gender/ethnicity/location proxies.
+
+Member: ${m.name}, ${m.occupation} | Income: KES ${m.income}/mo (${m.incomeType})
+Harvest: ${m.harvestMonths} | Children: ${m.children}
+Loan: KES ${m.loanAmount} for ${m.purpose}
+
+SCORING (100 pts):
+incomeConsistency(0-40): steady=35-40, seasonal+harvest months=25-35, irregular=10-24
+*** CRITICAL: seasonal WITH harvest months = 25-35 — NOT penalised ***
+harvestAlignment(0-30): aligned repayment=25-30, partial=15-24, none=0-14
+communitySignals(0-20): known trader/farmer=15-20, unknown=5-14
+riskDeductions(0 to -30): high loan/income=-10-15, many dependents=-5-8, no plan=-3-5
+
+DECISIONS: score>=90 AND amount<=15000 = APPROVE | score<60 OR 3+flags = DENY | else = ESCALATE
+
+Respond ONLY with valid JSON:
+{"score":72,"scoreBreakdown":{"incomeConsistency":28,"harvestAlignment":25,"communitySignals":14,"riskDeductions":-10},"decision":"ESCALATE","decisionReason":"2-sentence plain reason","riskFlags":[],"memberMessage":"warm message with *#123# appeal right — no shaming language"}`;
+
+  try{
+    const r=await callClaude(prompt);
+    guardianResult=r;
+    hide('guardian-loading'); show('guardian-output');
+    const score=Math.round(r.score)||65;
+    document.getElementById('g-score').textContent=score;
+    const bar=document.getElementById('g-bar');
+    setTimeout(()=>bar.style.width=score+'%',50);
+    bar.className='score-fill '+(score>=80?'fill-green':score>=60?'fill-amber':'fill-red');
+    const bk=r.scoreBreakdown||{};
+    document.getElementById('g-breakdown').innerHTML=
+      `<div class="bk-item"><div class="bk-val">${Math.round(bk.incomeConsistency||0)}<small style="font-size:.7rem;color:var(--muted)">/40</small></div><div class="bk-lbl">Income</div></div>`+
+      `<div class="bk-item"><div class="bk-val">${Math.round(bk.harvestAlignment||0)}<small style="font-size:.7rem;color:var(--muted)">/30</small></div><div class="bk-lbl">Harvest</div></div>`+
+      `<div class="bk-item"><div class="bk-val">${Math.round(bk.communitySignals||0)}<small style="font-size:.7rem;color:var(--muted)">/20</small></div><div class="bk-lbl">Community</div></div>`+
+      `<div class="bk-item"><div class="bk-val" style="color:#E24B4A">${Math.round(bk.riskDeductions||0)}</div><div class="bk-lbl">Risk</div></div>`;
+    const dec=r.decision||'ESCALATE';
+    const db=document.getElementById('g-decision');
+    db.className='decision-box dec-'+(dec==='APPROVE'?'approve':dec==='DENY'?'deny':'escalate');
+    document.getElementById('g-dec-label').textContent={APPROVE:'✓ Auto-Approved',DENY:'✗ Application Declined',ESCALATE:'→ Escalating to Human Review'}[dec]||dec;
+    document.getElementById('g-dec-reason').textContent=r.decisionReason||'';
+    document.getElementById('g-flags').innerHTML=(r.riskFlags||[]).map(f=>`<span class="badge badge-amber">⚑ ${f}</span>`).join('')||'<span class="badge badge-green">✓ No risk flags</span>';
+    document.getElementById('g-msg').textContent=r.memberMessage||'';
+    const ga=document.getElementById('g-action');
+    if(dec==='ESCALATE'){
+      ga.innerHTML='<button class="btn btn-purple" onclick="runHunter()">🏹 HUNT: Activate Hunter Agent →</button>';
+    }else{
+      ga.innerHTML='<button class="btn btn-sm" onclick="reset()">↺ New scenario</button>';
+      setStage('done');
+    }
+  }catch(e){
+    hide('guardian-loading');
+    showErr('Guardian Agent: '+e.message);
+  }
+}
+
+async function runHunter(){
+  if(kills.Hunter){triggerKill('Hunter','#799');return;}
+  const m=getMember();
+  const gr=guardianResult||{};
+  hideErr(); setStage('hunter');
+  show('hunter-panel'); show('hunter-loading'); hide('hunter-output');
+
+  const prompt=`You are the Hunter Agent for Ujima SACCO — Human-in-Loop Coordinator.
+CRITICAL: CANNOT approve or deny. Briefing ONLY. KILL SWITCH: *#799# (full system pause).
+Alert officer within 15 minutes.
+
+Member: ${m.name}, ${m.occupation} | Income: KES ${m.income}/mo (${m.incomeType})
+Harvest: ${m.harvestMonths} | Children: ${m.children}
+Loan: KES ${m.loanAmount} for ${m.purpose}
+Guardian score: ${gr.score}/100 | Risk flags: ${(gr.riskFlags||[]).join(', ')||'none'}
+Breakdown: Income ${gr.scoreBreakdown?.incomeConsistency}/40, Harvest ${gr.scoreBreakdown?.harvestAlignment}/30, Community ${gr.scoreBreakdown?.communitySignals}/20
+
+Respond ONLY with valid JSON:
+{"officerMatch":"Officer [Name] — [5-word specialty]","briefingSummary":"2-sentence officer summary","keyPoints":["point1","point2","point3","point4"],"recommendation":"1-sentence suggestion","crossSellOpportunity":"product","urgencyLevel":"HIGH","culturalContext":"1-2 sentences on seasonal or cultural context"}`;
+
+  try{
+    const r=await callClaude(prompt);
+    hide('hunter-loading'); show('hunter-output');
+    document.getElementById('h-officer').textContent=r.officerMatch||'Officer on duty';
+    document.getElementById('h-summary').textContent=r.briefingSummary||'';
+    document.getElementById('h-points').innerHTML=(r.keyPoints||[]).map(p=>`<div class="key-point"><span class="kp-dot"></span><span>${p}</span></div>`).join('');
+    document.getElementById('h-cross').textContent=r.crossSellOpportunity||'—';
+    document.getElementById('h-culture').textContent=r.culturalContext||'—';
+    const urgColors={HIGH:'badge-red',MEDIUM:'badge-amber',LOW:'badge-green'};
+    const urg=r.urgencyLevel||'MEDIUM';
+    document.getElementById('h-urgency').innerHTML=`<span style="font-size:.78rem;color:var(--muted)">Urgency:</span> <span class="badge ${urgColors[urg]||'badge-gray'}">${urg}</span>`;
+    document.getElementById('h-rec').innerHTML='<strong>Recommendation:</strong> '+r.recommendation;
+    setStage('done');
+  }catch(e){
+    hide('hunter-loading');
+    showErr('Hunter Agent: '+e.message);
+  }
+}
+
+function reset(){
+  ['scout','guardian','hunter'].forEach(a=>{
+    hide(a+'-panel');
+    hide(a+'-loading');
+    hide(a+'-output');
+    const b=document.getElementById(a+'-ks-badge');
+    if(b)b.style.display='none';
+    const k=document.getElementById('ks-'+a);
+    if(k)k.classList.remove('kill-active');
+  });
+  hide('kill-notice'); hide('err-box');
+  document.getElementById('btn-start').disabled=false;
+  kills={Scout:false,Guardian:false,Hunter:false};
+  guardianResult=null;
+  setStage('intake');
+}
+
+setStage('intake');
+</script>
+</body>
+</html>
