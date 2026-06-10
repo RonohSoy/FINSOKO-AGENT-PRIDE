@@ -231,7 +231,7 @@ textarea{resize:vertical;min-height:70px}
           🔍 Activate Scout Agent
         </button>
       </div>
-      <div class="hint">ℹ️ This app calls Claude AI in real time. Results are generated live for each agent stage.</div>
+      <div class="hint">ℹ️ Demo mode: works without a key, showing realistic agent responses. Add a free Groq key at console.groq.com for live AI.</div>
     </div>
   </div>
 
@@ -359,7 +359,7 @@ function checkKey(){
   const k=document.getElementById('api-key').value.trim();
   const s=document.getElementById('api-status');
   if((k.startsWith('gsk_')||k.startsWith('sk-'))&&k.length>10){s.textContent='✓ Ready';s.className='api-status api-ok';}
-  else{s.textContent='Not set';s.className='api-status api-no';}
+  else if(!k){s.textContent='Demo mode';s.className='api-status api-ok';} else{s.textContent='Invalid key';s.className='api-status api-no';}
 }
 
 function loadDemo(){
@@ -419,20 +419,64 @@ function triggerKill(agent,code){
   if(ks)ks.classList.add('kill-active');
 }
 
-async function callClaude(prompt){
+
+// Pre-built demo responses (used when no API key or API fails)
+const DEMO = {
+  scout: {
+    greeting: "Habari Grace! Karibu Ujima SACCO — tunafurahi kukusaidia.",
+    advice: "Kwa mkulima wa mahindi kama wewe, Oktoba na Novemba ni miezi ya mapato mazuri. Tunakushauri uweke akiba ya KES 3,000 kila mwezi baada ya mavuno ili kukusaidia wakati wa ada za shule Januari.",
+    stressDetected: true,
+    stressSignal: "sina pesa za ada",
+    huntTrigger: true,
+    huntReason: "Member mentions inability to pay school fees — financial stress signal detected",
+    literacyTip: "Save 15% of your October harvest income before spending — this covers January school fees without needing a loan."
+  },
+  guardian: {
+    score: 72,
+    scoreBreakdown: { incomeConsistency: 28, harvestAlignment: 26, communitySignals: 15, riskDeductions: -10 },
+    decision: "ESCALATE",
+    decisionReason: "Grace shows strong harvest-cycle income with clear October/November peaks. Loan amount of KES 28,000 exceeds auto-approve limit of KES 15,000 and requires officer review to verify seasonal repayment capacity.",
+    riskFlags: ["Loan amount exceeds auto-approve threshold", "Seasonal income — repayment schedule alignment needed"],
+    memberMessage: "Habari Grace! Ombi lako la mkopo linaendelea vizuri — score yako ni 72/100. Tunahitaji maafisa wetu kukagua mpango wako wa malipo. Utapata simu ndani ya masaa 48. Kwa malalamiko, piga *#123# bila malipo."
+  },
+  hunter: {
+    officerMatch: "Officer Sarah Wanjiku — Agricultural & Women Vendor Specialist",
+    officerContact: "s.wanjiku@ujima.co.ke | Ext. 204",
+    briefingSummary: "Grace Atieno, 42, experienced maize farmer from Kakamega with 10+ years repayment history. Requesting KES 28,000 for school fees and farm inputs ahead of March planting season.",
+    keyPoints: [
+      "Strong repayment track record — 10 years, zero defaults mentioned",
+      "Income peaks October/November (harvest) and March/April — schedule repayment accordingly",
+      "3 children: school fees due January, May, August — loan purpose aligns with harvest timing",
+      "No risk flags from Guardian — score 72/100, just above escalation threshold"
+    ],
+    recommendation: "Consider approving with harvest-aligned repayment schedule: first payment due November 2026 post-harvest, not January 2026.",
+    crossSellOpportunity: "Maize harvest insurance — KES 500/month premium covers crop failure risk during long rains",
+    urgencyLevel: "MEDIUM",
+    culturalContext: "Grace operates within the Luo farming community where October harvest is the primary income event. School fee season (January) falls during the income-lean period — loan timing is strategic, not distress-driven."
+  }
+};
+
+async function callClaude(prompt,demoKey){
+  // Demo mode — no API key needed
+  if(demoKey) return demoKey;
   const key=getApiKey();
-  if(!key){throw new Error('Please enter your free Groq API key. Get one free at console.groq.com');}
-  const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-    body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:1000,
-      messages:[{role:'user',content:prompt}]})
-  });
-  if(!res.ok){const e=await res.json();throw new Error(e.error?.message||'Groq API error '+res.status);}
-  const data=await res.json();
-  const text=data.choices[0].message.content;
-  const clean=text.replace(/```json|```/g,'').trim();
-  const match=clean.match(/\{[\s\S]*\}/);
-  if(!match)throw new Error('No JSON in response. Try again.');
-  return JSON.parse(match[0]);
+  if(!key) return null;
+  try{
+    const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:1000,
+        messages:[{role:'user',content:prompt}]})
+    });
+    if(!res.ok){const e=await res.json();throw new Error(e.error?.message||'API error '+res.status);}
+    const data=await res.json();
+    const text=data.choices[0].message.content;
+    const clean=text.replace(/```json|```/g,'').trim();
+    const match=clean.match(/\{[\s\S]*\}/);
+    if(!match)throw new Error('No JSON in response.');
+    return JSON.parse(match[0]);
+  }catch(e){
+    console.warn('API failed, using demo mode:',e.message);
+    return null;
+  }
 }
