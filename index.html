@@ -145,10 +145,10 @@ textarea{resize:vertical;min-height:70px}
 
   <!-- API Key Bar -->
   <div class="api-bar">
-    <span style="font-size:.8rem;font-weight:500;color:var(--amber);white-space:nowrap">🔑 Anthropic API Key:</span>
-    <input type="password" id="api-key" placeholder="sk-ant-..." oninput="checkKey()">
+    <span style="font-size:.8rem;font-weight:500;color:var(--amber);white-space:nowrap">🔑 API Key (Groq — free):</span>
+    <input type="password" id="api-key" placeholder="gsk_..." oninput="checkKey()">
     <span class="api-status api-no" id="api-status">Not set</span>
-    <span style="font-size:.72rem;color:var(--muted)">Your key is used only to call api.anthropic.com — never stored</span>
+    <span style="font-size:.72rem;color:var(--muted)">Free key from console.groq.com — never stored or shared</span>
   </div>
 
   <!-- Kill switch notice -->
@@ -328,7 +328,7 @@ textarea{resize:vertical;min-height:70px}
 
 <div class="footer">
   FinSoko Agent Pride · Ujima SACCO · Kenya DPA 2022 · SASRA Compliant · All data: AWS Africa Cape Town<br>
-  Capstone Deliverable 6 · Peter Ronoh, Chief AI Officer · <a href="https://github.com/RonohSoy/FINSOKO-AGENT-PRIDE" target="_blank" style="color:var(--blue)">GitHub Repo</a>
+  Capstone Deliverable 6 · Peter Ronoh, Chief AI Officer · Free API: console.groq.com · <a href="https://github.com/RonohSoy/FINSOKO-AGENT-PRIDE" target="_blank" style="color:var(--blue)">GitHub Repo</a>
 </div>
 
 <script>
@@ -358,7 +358,7 @@ buildHarvest();
 function checkKey(){
   const k=document.getElementById('api-key').value.trim();
   const s=document.getElementById('api-status');
-  if(k.startsWith('sk-ant-')&&k.length>20){s.textContent='✓ Ready';s.className='api-status api-ok';}
+  if((k.startsWith('gsk_')||k.startsWith('sk-'))&&k.length>10){s.textContent='✓ Ready';s.className='api-status api-ok';}
   else{s.textContent='Not set';s.className='api-status api-no';}
 }
 
@@ -421,190 +421,18 @@ function triggerKill(agent,code){
 
 async function callClaude(prompt){
   const key=getApiKey();
-  if(!key){throw new Error('Please enter your Anthropic API key above.');}
-  const key=getApiKey();
-  if(!key||!key.startsWith('sk-')){throw new Error('Please enter your Anthropic API key above.');}
-  const res=await fetch('https://api.anthropic.com/v1/messages',{
+  if(!key){throw new Error('Please enter your free Groq API key. Get one free at console.groq.com');}
+  const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{
     method:'POST',
-    headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'},
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+    body:JSON.stringify({model:'llama-3.3-70b-versatile',max_tokens:1000,
+      messages:[{role:'user',content:prompt}]})
   });
-  if(!res.ok){const e=await res.json();throw new Error(e.error?.message||'API error '+res.status);}
+  if(!res.ok){const e=await res.json();throw new Error(e.error?.message||'Groq API error '+res.status);}
   const data=await res.json();
-  const text=data.content.map(b=>b.type==='text'?b.text:'').join('');
-  const match=text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+  const text=data.choices[0].message.content;
+  const clean=text.replace(/```json|```/g,'').trim();
+  const match=clean.match(/\{[\s\S]*\}/);
   if(!match)throw new Error('No JSON in response. Try again.');
   return JSON.parse(match[0]);
 }
-
-async function runScout(){
-  if(kills.Scout){triggerKill('Scout','#700');return;}
-  const m=getMember();
-  document.getElementById('btn-start').disabled=true;
-  hideErr(); setStage('scout');
-  show('scout-panel'); show('scout-loading'); hide('scout-output');
-
-  const prompt=`You are the Scout Agent (Financial Literacy Coach) for Ujima SACCO in Kenya.
-Warm and supportive — like a community auntie, not a bank. Max 3 SMS/day. Cannot recommend specific loans.
-KILL SWITCH: *#700#. GUARD: No gender/ethnicity/location proxies. Data: AWS Africa Cape Town (Kenya DPA 2022).
-
-Member: ${m.name}, ${m.occupation}
-Income: KES ${m.income}/mo (${m.incomeType}) | Harvest: ${m.harvestMonths}
-Children: ${m.children} | Message: "${m.message}"
-
-Detect stress signals: "school fees","no money","loan shark","shylock","ninahitaji","sina pesa","threatened","debt collector".
-
-Respond ONLY with valid JSON (no markdown):
-{"greeting":"warm 1-sentence Swahili/English greeting","advice":"2-sentence harvest-cycle budgeting advice for their occupation","stressDetected":true,"stressSignal":"exact phrase or null","huntTrigger":true,"huntReason":"reason or null","literacyTip":"one practical savings tip for their situation"}`;
-
-  try{
-    const r=await callClaude(prompt);
-    hide('scout-loading'); show('scout-output');
-    document.getElementById('s-greeting').textContent=r.greeting||'Karibu!';
-    document.getElementById('s-advice').textContent=r.advice||'';
-    const badges=document.getElementById('s-badges');
-    badges.innerHTML='';
-    if(r.stressDetected) badges.innerHTML+=`<span class="badge badge-red">⚠ Stress detected: "${r.stressSignal}"</span>`;
-    badges.innerHTML+=r.huntTrigger
-      ?'<span class="badge badge-amber">→ HUNT triggered — escalating to Guardian</span>'
-      :'<span class="badge badge-teal">✓ Literacy complete — no loan needed</span>';
-    document.getElementById('s-trail').innerHTML=
-      `<div class="trail-row"><span class="trail-key">T</span><span class="trail-val">Active conversation — stress signal detected</span></div>`+
-      `<div class="trail-row"><span class="trail-key">R</span><span class="trail-val">Harvest calendar: ${m.harvestMonths}</span></div>`+
-      `<div class="trail-row"><span class="trail-key">A</span><span class="trail-val">Literacy gap logged anonymously</span></div>`+
-      `<div class="trail-row"><span class="trail-key">L</span><span class="trail-val">Stored on AWS Africa Cape Town — Kenya DPA 2022</span></div>`;
-    document.getElementById('s-tip').innerHTML='💡 Tip: '+r.literacyTip;
-    const sa=document.getElementById('s-action');
-    if(r.huntTrigger){
-      sa.innerHTML='<button class="btn btn-blue" onclick="runGuardian()">🛡 HUNT: Activate Guardian Agent →</button>';
-    }else{
-      sa.innerHTML='<button class="btn btn-sm" onclick="reset()">↺ New scenario</button>';
-      setStage('done');
-    }
-  }catch(e){
-    hide('scout-loading');
-    showErr('Scout Agent: '+e.message);
-    document.getElementById('btn-start').disabled=false;
-  }
-}
-
-async function runGuardian(){
-  if(kills.Guardian){triggerKill('Guardian','#733');return;}
-  const m=getMember();
-  hideErr(); setStage('guardian');
-  show('guardian-panel'); show('guardian-loading'); hide('guardian-output');
-
-  const prompt=`You are the Guardian Agent for Ujima SACCO — harvest-cycle-aware loan triage.
-KILL SWITCH: *#733#. Auto-approve max KES 15,000. GUARD: No gender/ethnicity/location proxies.
-
-Member: ${m.name}, ${m.occupation} | Income: KES ${m.income}/mo (${m.incomeType})
-Harvest: ${m.harvestMonths} | Children: ${m.children}
-Loan: KES ${m.loanAmount} for ${m.purpose}
-
-SCORING (100 pts):
-incomeConsistency(0-40): steady=35-40, seasonal+harvest months=25-35, irregular=10-24
-*** CRITICAL: seasonal WITH harvest months = 25-35 — NOT penalised ***
-harvestAlignment(0-30): aligned repayment=25-30, partial=15-24, none=0-14
-communitySignals(0-20): known trader/farmer=15-20, unknown=5-14
-riskDeductions(0 to -30): high loan/income=-10-15, many dependents=-5-8, no plan=-3-5
-
-DECISIONS: score>=90 AND amount<=15000 = APPROVE | score<60 OR 3+flags = DENY | else = ESCALATE
-
-Respond ONLY with valid JSON:
-{"score":72,"scoreBreakdown":{"incomeConsistency":28,"harvestAlignment":25,"communitySignals":14,"riskDeductions":-10},"decision":"ESCALATE","decisionReason":"2-sentence plain reason","riskFlags":[],"memberMessage":"warm message with *#123# appeal right — no shaming language"}`;
-
-  try{
-    const r=await callClaude(prompt);
-    guardianResult=r;
-    hide('guardian-loading'); show('guardian-output');
-    const score=Math.round(r.score)||65;
-    document.getElementById('g-score').textContent=score;
-    const bar=document.getElementById('g-bar');
-    setTimeout(()=>bar.style.width=score+'%',50);
-    bar.className='score-fill '+(score>=80?'fill-green':score>=60?'fill-amber':'fill-red');
-    const bk=r.scoreBreakdown||{};
-    document.getElementById('g-breakdown').innerHTML=
-      `<div class="bk-item"><div class="bk-val">${Math.round(bk.incomeConsistency||0)}<small style="font-size:.7rem;color:var(--muted)">/40</small></div><div class="bk-lbl">Income</div></div>`+
-      `<div class="bk-item"><div class="bk-val">${Math.round(bk.harvestAlignment||0)}<small style="font-size:.7rem;color:var(--muted)">/30</small></div><div class="bk-lbl">Harvest</div></div>`+
-      `<div class="bk-item"><div class="bk-val">${Math.round(bk.communitySignals||0)}<small style="font-size:.7rem;color:var(--muted)">/20</small></div><div class="bk-lbl">Community</div></div>`+
-      `<div class="bk-item"><div class="bk-val" style="color:#E24B4A">${Math.round(bk.riskDeductions||0)}</div><div class="bk-lbl">Risk</div></div>`;
-    const dec=r.decision||'ESCALATE';
-    const db=document.getElementById('g-decision');
-    db.className='decision-box dec-'+(dec==='APPROVE'?'approve':dec==='DENY'?'deny':'escalate');
-    document.getElementById('g-dec-label').textContent={APPROVE:'✓ Auto-Approved',DENY:'✗ Application Declined',ESCALATE:'→ Escalating to Human Review'}[dec]||dec;
-    document.getElementById('g-dec-reason').textContent=r.decisionReason||'';
-    document.getElementById('g-flags').innerHTML=(r.riskFlags||[]).map(f=>`<span class="badge badge-amber">⚑ ${f}</span>`).join('')||'<span class="badge badge-green">✓ No risk flags</span>';
-    document.getElementById('g-msg').textContent=r.memberMessage||'';
-    const ga=document.getElementById('g-action');
-    if(dec==='ESCALATE'){
-      ga.innerHTML='<button class="btn btn-purple" onclick="runHunter()">🏹 HUNT: Activate Hunter Agent →</button>';
-    }else{
-      ga.innerHTML='<button class="btn btn-sm" onclick="reset()">↺ New scenario</button>';
-      setStage('done');
-    }
-  }catch(e){
-    hide('guardian-loading');
-    showErr('Guardian Agent: '+e.message);
-  }
-}
-
-async function runHunter(){
-  if(kills.Hunter){triggerKill('Hunter','#799');return;}
-  const m=getMember();
-  const gr=guardianResult||{};
-  hideErr(); setStage('hunter');
-  show('hunter-panel'); show('hunter-loading'); hide('hunter-output');
-
-  const prompt=`You are the Hunter Agent for Ujima SACCO — Human-in-Loop Coordinator.
-CRITICAL: CANNOT approve or deny. Briefing ONLY. KILL SWITCH: *#799# (full system pause).
-Alert officer within 15 minutes.
-
-Member: ${m.name}, ${m.occupation} | Income: KES ${m.income}/mo (${m.incomeType})
-Harvest: ${m.harvestMonths} | Children: ${m.children}
-Loan: KES ${m.loanAmount} for ${m.purpose}
-Guardian score: ${gr.score}/100 | Risk flags: ${(gr.riskFlags||[]).join(', ')||'none'}
-Breakdown: Income ${gr.scoreBreakdown?.incomeConsistency}/40, Harvest ${gr.scoreBreakdown?.harvestAlignment}/30, Community ${gr.scoreBreakdown?.communitySignals}/20
-
-Respond ONLY with valid JSON:
-{"officerMatch":"Officer [Name] — [5-word specialty]","briefingSummary":"2-sentence officer summary","keyPoints":["point1","point2","point3","point4"],"recommendation":"1-sentence suggestion","crossSellOpportunity":"product","urgencyLevel":"HIGH","culturalContext":"1-2 sentences on seasonal or cultural context"}`;
-
-  try{
-    const r=await callClaude(prompt);
-    hide('hunter-loading'); show('hunter-output');
-    document.getElementById('h-officer').textContent=r.officerMatch||'Officer on duty';
-    document.getElementById('h-summary').textContent=r.briefingSummary||'';
-    document.getElementById('h-points').innerHTML=(r.keyPoints||[]).map(p=>`<div class="key-point"><span class="kp-dot"></span><span>${p}</span></div>`).join('');
-    document.getElementById('h-cross').textContent=r.crossSellOpportunity||'—';
-    document.getElementById('h-culture').textContent=r.culturalContext||'—';
-    const urgColors={HIGH:'badge-red',MEDIUM:'badge-amber',LOW:'badge-green'};
-    const urg=r.urgencyLevel||'MEDIUM';
-    document.getElementById('h-urgency').innerHTML=`<span style="font-size:.78rem;color:var(--muted)">Urgency:</span> <span class="badge ${urgColors[urg]||'badge-gray'}">${urg}</span>`;
-    document.getElementById('h-rec').innerHTML='<strong>Recommendation:</strong> '+r.recommendation;
-    setStage('done');
-  }catch(e){
-    hide('hunter-loading');
-    showErr('Hunter Agent: '+e.message);
-  }
-}
-
-function reset(){
-  ['scout','guardian','hunter'].forEach(a=>{
-    hide(a+'-panel');
-    hide(a+'-loading');
-    hide(a+'-output');
-    const b=document.getElementById(a+'-ks-badge');
-    if(b)b.style.display='none';
-    const k=document.getElementById('ks-'+a);
-    if(k)k.classList.remove('kill-active');
-  });
-  hide('kill-notice'); hide('err-box');
-  document.getElementById('btn-start').disabled=false;
-  kills={Scout:false,Guardian:false,Hunter:false};
-  guardianResult=null;
-  setStage('intake');
-}
-
-setStage('intake');
-</script>
-</body>
-</html>
